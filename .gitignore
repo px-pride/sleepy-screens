@@ -1,4 +1,8 @@
-sleepy_screens.exe
-sleepy_screens.ico
-*.exe
-*.ico
+# Ignore everything
+*
+
+# But not .ahk files
+!*.ahk
+
+# And not the .gitignore itself
+!.gitignore
