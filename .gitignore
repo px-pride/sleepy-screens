@@ -6,3 +6,6 @@
 
 # And not the .gitignore itself
 !.gitignore
+
+# And not the LICENSE file
+!LICENSE
