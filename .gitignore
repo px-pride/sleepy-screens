@@ -9,3 +9,6 @@
 
 # And not the LICENSE file
 !LICENSE
+
+# And not the README file
+!README.md
