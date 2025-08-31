@@ -126,7 +126,7 @@ ShowHelp(*) {
 SetWakeTime(*) {
     global wakeTime, wakeEnabled
     
-    result := InputBox("Enter wake time (24-hour format, e.g., 17:30):", "Set Wake Time", "w250 h120")
+    result := InputBox("Set wake time (24-hour format, e.g. 17:30):", "Set Wake Time", "w300 h100 -Resize")
     if (result.Result == "Cancel")
         return
     
