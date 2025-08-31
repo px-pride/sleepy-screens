@@ -33,6 +33,11 @@ SetTimer(CheckWake, 1000)
     SendMessage(0x112, 0xF170, 2, , "Program Manager")
 }
 
+; Set wake time with Win+Alt+W
+#!w:: {
+    SetWakeTime()
+}
+
 ; Check if it's time to wake monitors
 CheckWake() {
     global wakeTime, wakeEnabled, lastWake
@@ -112,9 +117,8 @@ IsStartupEnabled() {
 
 ; Function to show help
 ShowHelp(*) {
-    helpText := "Press Win+Alt+S to turn off your monitors instantly.`n`n"
-    helpText .= "Wake Timer: Set a time for monitors to turn on automatically.`n"
-    helpText .= "Note: Computer must stay on for wake timer to work."
+    helpText := "Win+Alt+S - Turn your screens off instantly`n"
+    helpText .= "Win+Alt+W - Wake up your screens on a timer"
     MsgBox(helpText, "Sleepy Screens - Help", 64)
 }
 
