@@ -130,13 +130,39 @@ SetWakeTime(*) {
     if (result.Result == "Cancel")
         return
     
-    ; Basic validation
-    if (!RegExMatch(result.Value, "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")) {
-        MsgBox("Invalid time format. Use HH:MM (e.g., 17:30)", "Error", 48)
+    ; Parse various time formats
+    inputTime := Trim(result.Value)
+    
+    ; Try to match different formats and normalize to HH:MM
+    if (RegExMatch(inputTime, "^(\d{1,2}):(\d{2})$", &match)) {
+        ; Format: H:MM or HH:MM
+        hours := Format("{:02d}", match[1])
+        minutes := match[2]
+    } else if (RegExMatch(inputTime, "^(\d{1,2})(\d{2})$", &match)) {
+        ; Format: HMM or HHMM
+        hours := Format("{:02d}", match[1])
+        minutes := match[2]
+    } else if (RegExMatch(inputTime, "^(\d{3,4})$", &match)) {
+        ; Format: HMM or HHMM (without groups)
+        if (StrLen(match[1]) == 3) {
+            hours := Format("{:02d}", SubStr(match[1], 1, 1))
+            minutes := SubStr(match[1], 2, 2)
+        } else {
+            hours := SubStr(match[1], 1, 2)
+            minutes := SubStr(match[1], 3, 2)
+        }
+    } else {
+        MsgBox("Invalid time format. Use HH:MM, HHMM, or HMM (e.g., 17:30, 1730, 730)", "Error", 48)
         return
     }
     
-    wakeTime := result.Value
+    ; Validate hours and minutes
+    if (hours > 23 || minutes > 59) {
+        MsgBox("Invalid time. Hours must be 0-23, minutes 0-59.", "Error", 48)
+        return
+    }
+    
+    wakeTime := hours . ":" . minutes
     wakeEnabled := true  ; Automatically enable when time is set
     try {
         RegWrite(wakeTime, "REG_SZ", SETTINGS_REG_KEY, "WakeTime")
