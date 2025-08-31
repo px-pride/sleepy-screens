@@ -4,7 +4,13 @@
 
 ; Constants
 STARTUP_REG_KEY := "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
+SETTINGS_REG_KEY := "HKEY_CURRENT_USER\Software\SleepyScreens"
 APP_NAME := "SleepyScreens"
+
+; Wake timer variables
+global wakeTime := ""
+global wakeEnabled := false
+global lastWake := ""
 
 ; Get the executable path (works for both .ahk and compiled .exe)
 APP_PATH := A_IsCompiled ? A_ScriptFullPath : '"' . A_AhkPath . '" "' . A_ScriptFullPath . '"'
@@ -12,13 +18,45 @@ APP_PATH := A_IsCompiled ? A_ScriptFullPath : '"' . A_AhkPath . '" "' . A_Script
 ; Initialize startup behavior on first run
 InitializeStartup()
 
+; Load wake settings
+LoadWakeSettings()
+
 ; Create system tray menu
 CreateTrayMenu()
+
+; Start wake timer (checks every second)
+SetTimer(CheckWake, 1000)
 
 ; Turn off monitors with Win+Alt+S (on key release)
 #!s up:: {
     ; Method 1: SendMessage (most reliable)
     SendMessage(0x112, 0xF170, 2, , "Program Manager")
+}
+
+; Check if it's time to wake monitors
+CheckWake() {
+    global wakeTime, wakeEnabled, lastWake
+    
+    if (!wakeEnabled || wakeTime == "")
+        return
+    
+    currentTime := FormatTime(, "HH:mm")
+    if (currentTime == wakeTime && currentTime != lastWake) {
+        lastWake := currentTime  ; Prevent re-triggering in same minute
+        ; Move mouse 1 pixel to wake monitors
+        DllCall("mouse_event", "UInt", 0x0001, "Int", 1, "Int", 0, "UInt", 0, "Ptr", 0)
+        Sleep(40)
+        DllCall("mouse_event", "UInt", 0x0001, "Int", -1, "Int", 0, "UInt", 0, "Ptr", 0)
+    }
+}
+
+; Load wake settings from registry
+LoadWakeSettings() {
+    global wakeTime, wakeEnabled
+    try {
+        wakeTime := RegRead(SETTINGS_REG_KEY, "WakeTime")
+        wakeEnabled := RegRead(SETTINGS_REG_KEY, "WakeEnabled") == "1"
+    }
 }
 
 ; Function to initialize startup (add to registry on first run)
@@ -41,6 +79,12 @@ CreateTrayMenu() {
     
     ; Add menu items
     A_TrayMenu.Add("Run at startup", ToggleStartup)
+    A_TrayMenu.Add() ; Separator
+    A_TrayMenu.Add("Set wake time", SetWakeTime)
+    A_TrayMenu.Add("Enable wake timer", ToggleWakeTimer)
+    if (wakeEnabled)
+        A_TrayMenu.Check("Enable wake timer")
+    A_TrayMenu.Add() ; Separator
     A_TrayMenu.Add("Help", ShowHelp)
     A_TrayMenu.Add("Exit", (*) => ExitApp())
     
@@ -50,7 +94,10 @@ CreateTrayMenu() {
     }
     
     ; Set tooltip
-    A_IconTip := "Sleepy Screens - Win+Alt+S to turn off monitors"
+    tooltip := "Sleepy Screens - Win+Alt+S to turn off monitors"
+    if (wakeEnabled && wakeTime != "")
+        tooltip .= "`nWake at " . wakeTime
+    A_IconTip := tooltip
 }
 
 ; Function to check if startup is enabled
@@ -65,7 +112,51 @@ IsStartupEnabled() {
 
 ; Function to show help
 ShowHelp(*) {
-    MsgBox("Press Win+Alt+S to turn off your monitors instantly.", "Sleepy Screens - Help", 64)
+    helpText := "Press Win+Alt+S to turn off your monitors instantly.`n`n"
+    helpText .= "Wake Timer: Set a time for monitors to turn on automatically.`n"
+    helpText .= "Note: Computer must stay on for wake timer to work."
+    MsgBox(helpText, "Sleepy Screens - Help", 64)
+}
+
+; Set wake time
+SetWakeTime(*) {
+    global wakeTime, wakeEnabled
+    
+    result := InputBox("Enter wake time (24-hour format, e.g., 17:30):", "Set Wake Time", "w250 h120")
+    if (result.Result == "Cancel")
+        return
+    
+    ; Basic validation
+    if (!RegExMatch(result.Value, "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")) {
+        MsgBox("Invalid time format. Use HH:MM (e.g., 17:30)", "Error", 48)
+        return
+    }
+    
+    wakeTime := result.Value
+    wakeEnabled := true  ; Automatically enable when time is set
+    try {
+        RegWrite(wakeTime, "REG_SZ", SETTINGS_REG_KEY, "WakeTime")
+        RegWrite("1", "REG_SZ", SETTINGS_REG_KEY, "WakeEnabled")
+    }
+    
+    CreateTrayMenu() ; Refresh menu
+}
+
+; Toggle wake timer
+ToggleWakeTimer(*) {
+    global wakeEnabled, wakeTime
+    
+    if (wakeTime == "") {
+        MsgBox("Please set a wake time first.", "No Wake Time", 48)
+        return
+    }
+    
+    wakeEnabled := !wakeEnabled
+    try {
+        RegWrite(wakeEnabled ? "1" : "0", "REG_SZ", SETTINGS_REG_KEY, "WakeEnabled")
+    }
+    
+    CreateTrayMenu() ; Refresh menu
 }
 
 ; Function to toggle startup
