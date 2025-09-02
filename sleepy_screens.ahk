@@ -86,9 +86,20 @@ CreateTrayMenu() {
     A_TrayMenu.Add("Run at startup", ToggleStartup)
     A_TrayMenu.Add() ; Separator
     A_TrayMenu.Add("Set wake time", SetWakeTime)
-    A_TrayMenu.Add("Enable wake timer", ToggleWakeTimer)
-    if (wakeEnabled)
-        A_TrayMenu.Check("Enable wake timer")
+    
+    ; Add Enable wake timer with time display
+    wakeMenuText := "Enable wake timer"
+    if (wakeTime != "")
+        wakeMenuText .= " (" . wakeTime . ")"
+    A_TrayMenu.Add(wakeMenuText, ToggleWakeTimer)
+    
+    ; Check and/or disable based on state
+    if (wakeTime == "") {
+        A_TrayMenu.Disable(wakeMenuText)
+    } else if (wakeEnabled) {
+        A_TrayMenu.Check(wakeMenuText)
+    }
+    
     A_TrayMenu.Add() ; Separator
     A_TrayMenu.Add("Help", ShowHelp)
     A_TrayMenu.Add("Exit", (*) => ExitApp())
@@ -126,7 +137,7 @@ ShowHelp(*) {
 SetWakeTime(*) {
     global wakeTime, wakeEnabled
     
-    result := InputBox("Set wake time (24-hour format, e.g. 17:30):", "Set Wake Time", "w300 h100")
+    result := InputBox("Set wake time (24-hour format, e.g. 17:30):", "Set Wake Time", "w300 h100", wakeTime)
     if (result.Result == "Cancel")
         return
     
