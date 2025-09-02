@@ -46,8 +46,9 @@ CheckWake() {
         return
     
     currentTime := FormatTime(, "HH:mm")
-    if (currentTime == wakeTime && currentTime != lastWake) {
-        lastWake := currentTime  ; Prevent re-triggering in same minute
+    currentDateTime := FormatTime(, "yyyyMMddHHmm")
+    if (currentTime == wakeTime && currentDateTime != lastWake) {
+        lastWake := currentDateTime  ; Store full datetime to allow daily recurrence
         ; Move mouse 1 pixel to wake monitors
         DllCall("mouse_event", "UInt", 0x0001, "Int", 1, "Int", 0, "UInt", 0, "Ptr", 0)
         Sleep(40)
